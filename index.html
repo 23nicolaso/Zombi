@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Times Square — Pixel Scan Lab</title>
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/widgets.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Cesium.js" defer></script>
+  <script src="outbreak.js?v=4" defer></script>
+  <script src="player.js?v=2" defer></script>
+  <script src="app.js?v=5" defer></script>
+</head>
+<body>
+  <main id="viewport" aria-label="Interactive Times Square scan"></main>
+  <header><div class="brand"><span class="mark">Z</span><div>DEAD CITY<span>SCAN → PIXELS / EXPERIMENT 001</span></div></div><div class="location">MANHATTAN, NYC <span>40.7580° N · 73.9855° W</span></div></header>
+  <aside class="panel">
+    <div class="eyebrow">VISUAL PROTOTYPE</div><h1>Times Square<span>after the end.</span></h1>
+    <p class="intro">Real city geometry. A low-resolution lens.<br>Tune the look of the apocalypse.</p>
+    <div class="eyebrow">FIRST PERSON</div>
+    <label class="control" for="characterScale"><span>Player & crowd size <output id="characterScaleOut">20%</output></span><input id="characterScale" type="range" min="5" max="100" step="5" value="20"></label>
+    <button id="walkMode" class="focus-button">Walk the streets ↗</button>
+    <button id="placePlayer" class="text-button">Choose player spawn ↗</button>
+    <label class="check"><input type="checkbox" id="flatWalk"> Flat street fallback (30 m)</label>
+    <p id="playerMessage" class="sim-message" role="status">Click Walk the streets, then click pavement.</p>
+    <div class="divider"></div>
+    <div class="presets" aria-label="Rendering presets"><button data-preset="pixel" class="active">Pixel</button><button data-preset="outbreak">Outbreak</button><button data-preset="original">Original</button></div>
+    <label class="control" for="pixels"><span>Render width <output id="pixelsOut">432 px</output></span><input id="pixels" type="range" min="240" max="1440" step="16" value="432"></label>
+    <label class="control" for="outline"><span>Outline strength <output id="outlineOut">1.50</output></span><input id="outline" type="range" min="0" max="1.5" step="0.05" value="1.5"></label>
+    <label class="control" for="colors"><span>Color steps / channel <output id="colorsOut">12</output></span><input id="colors" type="range" min="3" max="32" step="1" value="12"></label>
+    <label class="control" for="decay"><span>Apocalypse tint <output id="decayOut">20%</output></span><input id="decay" type="range" min="0" max="1" step="0.05" value="0.2"></label>
+    <div class="divider"></div>
+    <label class="control" for="pitch"><span>Camera elevation <output id="pitchOut">45°</output></span><input id="pitch" type="range" min="15" max="90" step="1" value="45"></label>
+    <label class="control" for="heading"><span>Camera heading <output id="headingOut">25°</output></span><input id="heading" type="range" min="0" max="360" step="1" value="25"></label>
+    <label class="check"><input type="checkbox" id="ortho"> Orthographic view</label>
+    <label class="check"><input type="checkbox" id="compare"> Compare original / stylized</label>
+    <label class="control comparison-control" for="split" hidden><span>Comparison divider</span><input id="split" type="range" min="5" max="95" value="50"></label>
+    <div class="divider"></div>
+    <div class="eyebrow">OUTBREAK SIMULATION</div>
+    <label class="check"><input type="checkbox" id="showOutbreak" checked> People & apocalypse assets</label>
+    <label class="control" for="remaining"><span>Population remaining <output id="remainingOut">35%</output></span><input id="remaining" type="range" min="0" max="100" value="35" step="5"></label>
+    <label class="control" for="infected"><span>Initially infected <output id="infectedOut">80%</output></span><input id="infected" type="range" min="0" max="100" value="80" step="5"></label>
+    <div class="population-note"><a href="https://www.timessquarenyc.org/business-community/market-research-data" target="_blank" rel="noreferrer">2024 baseline: ~220,000 pedestrians/day ↗</a><p>Estimate: 20-minute visit × 10% local share × population remaining. A game scenario, not a measured crowd.</p><span id="populationCount" aria-live="polite">Load a scan to populate the street.</span></div>
+    <div class="sim-stats"><span><i class="zombie-dot"></i> <b id="zombieCount">0</b> infected</span><span><i class="survivor-dot"></i> <b id="survivorCount">0</b> survivors</span></div>
+    <div class="actions"><button id="pauseSim">Pause</button><button id="resetSim">Reset outbreak</button></div>
+    <button id="focusOutbreak" class="focus-button">Focus crowd ↗</button>
+    <button id="placeOutbreak" class="text-button">Place outbreak on a street ↗</button>
+    <p id="simMessage" class="sim-message" role="status">Loads with your scan. Street placement is approximate.</p>
+    <div class="actions"><button id="home">Recenter</button><button id="settings">Scan source ↗</button></div>
+    <button class="text-button" id="save">Save look settings ↓</button>
+  </aside>
+  <div id="comparison" hidden><span>ORIGINAL</span><span>STYLIZED</span></div>
+  <div id="placementMessage" role="status" hidden></div>
+  <div id="walkHUD" hidden>
+    <div class="walk-crosshair" aria-hidden="true">+</div>
+    <div class="walk-top"><span>DEAD CITY / FIRST PERSON</span><button id="exitWalk">Exit walk mode · Esc</button></div>
+    <div class="walk-help"><div id="walkStatus" role="status">WASD walk · mouse look</div><p>WASD / arrows · Shift sprint · Ctrl crouch · R respawn</p><button id="captureMouse">Capture mouse</button><button id="respawnPlayer">Return to spawn</button></div>
+  </div>
+  <div class="bottom"><span id="status" role="status">Waiting for a city scan</span><span>DRAG TO PAN · WHEEL TO ZOOM · CTRL + DRAG TO ORBIT</span></div>
+  <dialog id="sourceDialog" open>
+    <div class="eyebrow">LOAD THE REAL PLACE</div><h2>Bring Times Square into focus.</h2>
+    <p>This experiment needs an actual scan. Choose live Google photogrammetry or a downloaded, self-contained GLB model.</p>
+    <section><h3><span>01</span> Stream Google 3D tiles</h3><p>Requires your Google Maps Platform key with <strong>Map Tiles API</strong> enabled and billing configured. Requests go directly from your browser to Google. The key is kept in this page’s memory only.</p>
+      <form id="googleForm"><label for="apiKey">Google Maps API key</label><div class="key-row"><input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Enter key locally"><button type="submit" id="connect">Load Times Square</button></div></form>
+      <a href="https://developers.google.com/maps/documentation/tile/get-api-key" target="_blank" rel="noreferrer">Set up a Maps key ↗</a>
+    </section>
+    <section><h3><span>02</span> Open a downloaded scan</h3><p>Use a <strong>.glb</strong> with embedded textures. The file stays on your computer. Automatic framing handles different model origins and sizes.</p>
+      <label class="file-button" for="file">Choose GLB scan <span>↑</span></label><input type="file" id="file" accept=".glb" hidden>
+      <a href="https://sketchfab.com/3d-models/times-square-new-york-city-ny-usa-b1cf32ba3cf040bca21900fdfed71562" target="_blank" rel="noreferrer">Times Square model candidate — Brian Trepanier / CC BY ↗</a>
+      <p class="small">The candidate’s scan provenance has not been verified. Check the source and rights before shipping a game. Keep any required attribution with your asset.</p>
+    </section>
+    <p id="loadMessage" role="status">No scan is bundled. Until one loads, the experiment does not demonstrate the final visual result.</p>
+    <button id="closeDialog" class="text-button">Close source panel</button>
+  </dialog>
+  <noscript>This prototype requires JavaScript and WebGL.</noscript>
+</body>
+</html>
